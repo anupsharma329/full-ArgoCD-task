@@ -1,0 +1,127 @@
+# .github/workflows/deploy.yml
+name: Build and Deploy Frontend & Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Frontend linting & testing
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+      - name: Lint frontend
+        run: |
+          cd frontend
+          npm run lint
+
+      # Backend linting & testing
+      - name: Setup Node.js for backend
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+      - name: Start backend (check server starts)
+        run: |
+          cd backend
+          npm start &
+          sleep 5
+          kill $!
+
+      - name: Slack notification - Tests
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: "Tests completed: ${{ job.status }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  build-and-deploy:
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKER_PASSWORD }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+
+      # Build and push backend image
+      - name: Build and push backend image
+        id: backend_image
+        run: |
+          BACKEND_TAG=backend-${{ github.sha }}
+          docker build -t anupsharma329/backend:$BACKEND_TAG backend/
+          docker push anupsharma329/backend:$BACKEND_TAG
+          echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
+
+      # Build and push frontend image
+      - name: Build and push frontend image
+        id: frontend_image
+        run: |
+          FRONTEND_TAG=frontend-${{ github.sha }}
+          docker build -t anupsharma329/frontend:$FRONTEND_TAG frontend/
+          docker push anupsharma329/frontend:$FRONTEND_TAG
+          echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
+
+      # Update backend manifest
+      - name: Update backend manifest
+        run: |
+          sed -i "s|image: anupsharma329/backend:.*|image: anupsharma329/backend:${BACKEND_TAG}|" k8s/backend-deployment.yaml
+
+      # Update frontend manifest
+      - name: Update frontend manifest
+        run: |
+          sed -i "s|image: anupsharma329/frontend:.*|image: anupsharma329/frontend:${FRONTEND_TAG}|" k8s/frontend-deployment.yaml
+
+      # Commit and push manifest changes
+      - name: Commit and push manifest changes
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml
+          git commit -m "Update backend and frontend images to $BACKEND_TAG and $FRONTEND_TAG [ci skip]" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Slack notification - Deployment
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: "Deployment completed: ${{ job.status }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
