@@ -1,4 +1,10 @@
-# Amrutam Application
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+# full-ArgoCD-task
+=======
+>>>>>>> 3dec752 (Add backend and frontend k8s manifests)
+# Check ArgoCD with Helm Application
 
 A full-stack application with Node.js backend and Next.js frontend, deployed to Kubernetes using ArgoCD.
 
@@ -133,3 +139,7 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE
 
 
 
+<<<<<<< HEAD
+=======
+>>>>>>> e5d9436 (first commit)
+>>>>>>> 3dec752 (Add backend and frontend k8s manifests)
