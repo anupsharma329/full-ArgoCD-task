@@ -1,5 +1,5 @@
 # .github/workflows/deploy.yml
-name: Build and Deploy Frontend & Backend
+name: Build and Deploy with Helm + Argo CD
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
+      - 'backend-chart/**'
+      - 'frontend-chart/**'
+      - 'argocd/**'
       - '.github/workflows/deploy.yml'
 
 permissions:
@@ -96,32 +99,55 @@ jobs:
           docker push anupsharma329/frontend:$FRONTEND_TAG
           echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
 
-      # Update backend manifest
-      - name: Update backend manifest
+      # Update backend Helm chart values
+      - name: Update backend Helm chart
         run: |
-          sed -i "s|image: anupsharma329/backend:.*|image: anupsharma329/backend:${BACKEND_TAG}|" k8s/backend-deployment.yaml
+          # Update the image tag in backend-chart/values.yaml
+          sed -i "s|tag: \".*\"|tag: \"$BACKEND_TAG\"|" backend-chart/values.yaml
+          # Update the appVersion in backend-chart/Chart.yaml
+          sed -i "s|appVersion: \".*\"|appVersion: \"$BACKEND_TAG\"|" backend-chart/Chart.yaml
 
-      # Update frontend manifest
-      - name: Update frontend manifest
+      # Update frontend Helm chart values
+      - name: Update frontend Helm chart
         run: |
-          sed -i "s|image: anupsharma329/frontend:.*|image: anupsharma329/frontend:${FRONTEND_TAG}|" k8s/frontend-deployment.yaml
+          # Update the image tag in frontend-chart/values.yaml
+          sed -i "s|tag: \".*\"|tag: \"$FRONTEND_TAG\"|" frontend-chart/values.yaml
+          # Update the appVersion in frontend-chart/Chart.yaml
+          sed -i "s|appVersion: \".*\"|appVersion: \"$FRONTEND_TAG\"|" frontend-chart/Chart.yaml
 
-      # Commit and push manifest changes
-      - name: Commit and push manifest changes
+      # Update Argo CD application manifests with new image tags
+      - name: Update Argo CD applications
+        run: |
+          # Update backend-helm-app.yaml
+          sed -i "s|tag: \".*\"|tag: \"$BACKEND_TAG\"|" argocd/backend-helm-app.yaml
+          # Update frontend-helm-app.yaml
+          sed -i "s|tag: \".*\"|tag: \"$FRONTEND_TAG\"|" argocd/frontend-helm-app.yaml
+
+      # Commit and push all changes
+      - name: Commit and push changes
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml
-          git commit -m "Update backend and frontend images to $BACKEND_TAG and $FRONTEND_TAG [ci skip]" || echo "No changes to commit"
+          git add backend-chart/values.yaml backend-chart/Chart.yaml
+          git add frontend-chart/values.yaml frontend-chart/Chart.yaml
+          git add argocd/backend-helm-app.yaml argocd/frontend-helm-app.yaml
+          git commit -m "Update Helm charts and Argo CD apps with new image tags: $BACKEND_TAG and $FRONTEND_TAG [ci skip]" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Wait for Argo CD to sync (optional)
+      - name: Wait for Argo CD sync
+        run: |
+          echo "Waiting for Argo CD to detect changes and sync..."
+          sleep 30
+          echo "Argo CD should now be syncing the updated applications"
 
       - name: Slack notification - Deployment
         if: always()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: "Deployment completed: ${{ job.status }}"
+          text: "Deployment completed: ${{ job.status }} - Backend: $BACKEND_TAG, Frontend: $FRONTEND_TAG"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

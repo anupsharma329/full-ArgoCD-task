@@ -4,7 +4,7 @@
 # full-ArgoCD-task
 =======
 >>>>>>> 3dec752 (Add backend and frontend k8s manifests)
-# Check ArgoCD with Helm Application
+# Testing WebApplication with ArgoCD using Helm 
 
 A full-stack application with Node.js backend and Next.js frontend, deployed to Kubernetes using ArgoCD.
 
