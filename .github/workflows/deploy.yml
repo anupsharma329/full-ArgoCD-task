@@ -75,11 +75,18 @@ jobs:
 
       - name: Debug Docker credentials
         run: |
-          echo "Username: ${{ secrets.DOCKER_USERNAME }}"
-          echo "Username length: ${#DOCKER_USERNAME}"
-          echo "Password length: ${#DOCKER_PASSWORD}"
-          echo "First 3 chars of password: ${DOCKER_PASSWORD:0:3}..."
-          echo "Testing Docker login..."
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "❌ ERROR: DOCKER_USERNAME secret is empty or not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "❌ ERROR: DOCKER_PASSWORD secret is empty or not set"
+            exit 1
+          fi
+          echo "✅ Username: ${{ secrets.DOCKER_USERNAME }}"
+          echo "✅ Username length: ${#DOCKER_USERNAME}"
+          echo "✅ Password length: ${#DOCKER_PASSWORD}"
+          echo "✅ First 3 chars of password: ${DOCKER_PASSWORD:0:3}..."
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -87,6 +94,9 @@ jobs:
       - name: Log in to DockerHub
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       # Build and push backend image
       - name: Build and push backend image
