@@ -16,7 +16,7 @@ spec:
         replicaCount: 3
         image:
           repository: anupsharma329/backend
-          tag: "backend-849b44d411aa421d4c9107db0e1bdb9d739f4d73"
+          tag: "v1.0.6"
         service:
           type: ClusterIP
           port: 4000
