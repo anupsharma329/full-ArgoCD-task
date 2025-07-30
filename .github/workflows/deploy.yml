@@ -98,11 +98,25 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Generate semantic version
+      - name: Generate semantic version
+        id: version
+        run: |
+          # Get the current date for versioning
+          DATE=$(date +'%Y%m%d')
+          # Get the run number for incremental versioning
+          RUN_NUMBER=${{ github.run_number }}
+          # Create semantic version
+          VERSION="v1.0.${RUN_NUMBER}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
       # Build and push backend image
       - name: Build and push backend image
         id: backend_image
         run: |
-          BACKEND_TAG=backend-${{ github.sha }}
+          BACKEND_TAG=${{ env.VERSION }}
           docker build -t anupsharma329/backend:$BACKEND_TAG backend/
           docker push anupsharma329/backend:$BACKEND_TAG
           echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
@@ -111,7 +125,7 @@ jobs:
       - name: Build and push frontend image
         id: frontend_image
         run: |
-          FRONTEND_TAG=frontend-${{ github.sha }}
+          FRONTEND_TAG=${{ env.VERSION }}
           docker build -t anupsharma329/frontend:$FRONTEND_TAG frontend/
           docker push anupsharma329/frontend:$FRONTEND_TAG
           echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
@@ -120,25 +134,25 @@ jobs:
       - name: Update backend Helm chart
         run: |
           # Update the image tag in backend-chart/values.yaml
-          sed -i "s|tag: \".*\"|tag: \"$BACKEND_TAG\"|" backend-chart/values.yaml
+          sed -i "s|tag: \".*\"|tag: \"${{ env.VERSION }}\"|" backend-chart/values.yaml
           # Update the appVersion in backend-chart/Chart.yaml
-          sed -i "s|appVersion: \".*\"|appVersion: \"$BACKEND_TAG\"|" backend-chart/Chart.yaml
+          sed -i "s|appVersion: \".*\"|appVersion: \"${{ env.VERSION }}\"|" backend-chart/Chart.yaml
 
       # Update frontend Helm chart values
       - name: Update frontend Helm chart
         run: |
           # Update the image tag in frontend-chart/values.yaml
-          sed -i "s|tag: \".*\"|tag: \"$FRONTEND_TAG\"|" frontend-chart/values.yaml
+          sed -i "s|tag: \".*\"|tag: \"${{ env.VERSION }}\"|" frontend-chart/values.yaml
           # Update the appVersion in frontend-chart/Chart.yaml
-          sed -i "s|appVersion: \".*\"|appVersion: \"$FRONTEND_TAG\"|" frontend-chart/Chart.yaml
+          sed -i "s|appVersion: \".*\"|appVersion: \"${{ env.VERSION }}\"|" frontend-chart/Chart.yaml
 
       # Update Argo CD application manifests with new image tags
       - name: Update Argo CD applications
         run: |
           # Update backend-helm-app.yaml
-          sed -i "s|tag: \".*\"|tag: \"$BACKEND_TAG\"|" argocd/backend-helm-app.yaml
+          sed -i "s|tag: \".*\"|tag: \"${{ env.VERSION }}\"|" argocd/backend-helm-app.yaml
           # Update frontend-helm-app.yaml
-          sed -i "s|tag: \".*\"|tag: \"$FRONTEND_TAG\"|" argocd/frontend-helm-app.yaml
+          sed -i "s|tag: \".*\"|tag: \"${{ env.VERSION }}\"|" argocd/frontend-helm-app.yaml
 
       # Commit and push all changes
       - name: Commit and push changes
@@ -148,7 +162,7 @@ jobs:
           git add backend-chart/values.yaml backend-chart/Chart.yaml
           git add frontend-chart/values.yaml frontend-chart/Chart.yaml
           git add argocd/backend-helm-app.yaml argocd/frontend-helm-app.yaml
-          git commit -m "Update Helm charts and Argo CD apps with new image tags: $BACKEND_TAG and $FRONTEND_TAG [ci skip]" || echo "No changes to commit"
+          git commit -m "Deploy version ${{ env.VERSION }} - Update Helm charts and Argo CD apps [ci skip]" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -165,6 +179,6 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: "Deployment completed: ${{ job.status }} - Backend: $BACKEND_TAG, Frontend: $FRONTEND_TAG"
+          text: "Deployment completed: ${{ job.status }} - Version: ${{ env.VERSION }}"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
