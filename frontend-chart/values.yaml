@@ -8,7 +8,7 @@ image:
   repository: anupsharma329/frontend
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1.1"
+  tag: "frontend-849b44d411aa421d4c9107db0e1bdb9d739f4d73"
 
 imagePullSecrets: []
 nameOverride: ""
