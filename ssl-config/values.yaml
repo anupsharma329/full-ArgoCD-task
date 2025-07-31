@@ -33,3 +33,32 @@ services:
 
 # Email for Let's Encrypt
 email: your-email@example.com
+
+# Service Account configuration
+serviceAccount:
+  create: true
+  name: ""
+
+# Service configuration (for test template)
+service:
+  type: ClusterIP
+  port: 80
+
+# Resources
+resources: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
