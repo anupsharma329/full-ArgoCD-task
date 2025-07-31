@@ -1,0 +1,35 @@
+# Default values for ssl-config
+# This is a YAML-formatted file.
+
+# Domain configuration
+domain: your-domain.com
+
+# SSL/TLS configuration
+ssl:
+  enabled: true
+  issuer: letsencrypt-prod
+  secretName: ssl-tls-secret
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+# Services configuration
+services:
+  frontend:
+    name: frontend-helm
+    port: 80
+    path: /
+  backend:
+    name: backend-helm
+    port: 4000
+    path: /api
+
+# Email for Let's Encrypt
+email: your-email@example.com

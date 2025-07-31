@@ -1,0 +1,35 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "ssl-config.fullname" . }}-ssl
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ssl.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.domain }}
+    secretName: {{ .Values.ssl.secretName }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.domain }}
+    http:
+      paths:
+      - path: {{ .Values.services.frontend.path }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.frontend.name }}
+            port:
+              number: {{ .Values.services.frontend.port }}
+      - path: {{ .Values.services.backend.path }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.backend.name }}
+            port:
+              number: {{ .Values.services.backend.port }}
+{{- end }} 
