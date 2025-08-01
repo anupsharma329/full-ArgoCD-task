@@ -16,7 +16,7 @@ spec:
         replicaCount: 3
         image:
           repository: anupsharma329/frontend
-          tag: "v1.0.7"
+          tag: "v1.0.8"
         service:
           type: ClusterIP
           port: 80
