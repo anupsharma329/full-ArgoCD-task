@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: slack-config
+  namespace: monitoring
+spec:
+  route:
+    receiver: 'slack-general'
+    groupBy: ['alertname', 'namespace']
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 12h
+  
+  receivers:
+  - name: 'slack-general'
+    slackConfigs:
+    - apiURL:
+        name: slack-webhook-url
+        key: url
+      channel: '#devops-alerts'
+      title: '🚨 Alert: {{ .GroupLabels.alertname }}'
+      text: |
+        *Alert:* {{ .GroupLabels.alertname }}
+        *Severity:* {{ .CommonLabels.severity }}
+        *Namespace:* {{ .GroupLabels.namespace }}
+        *Description:* {{ .CommonAnnotations.summary }}
+        
+        {{ range .Alerts }}
+        *Alert:* {{ .Annotations.summary }}
+        *Status:* {{ .Status }}
+        {{ end }}
+  
+  - name: 'null' 

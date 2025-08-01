@@ -1,0 +1,39 @@
+{{- if .Values.serviceMonitors.frontend.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "monitoring-config.fullname" . }}-frontend
+  namespace: {{ .Values.monitoring.namespace }}
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      {{- toYaml .Values.serviceMonitors.frontend.selector | nindent 6 }}
+  endpoints:
+  {{- range .Values.serviceMonitors.frontend.endpoints }}
+  - port: {{ .port }}
+    path: {{ .path }}
+    interval: {{ .interval }}
+  {{- end }}
+{{- end }}
+---
+{{- if .Values.serviceMonitors.backend.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "monitoring-config.fullname" . }}-backend
+  namespace: {{ .Values.monitoring.namespace }}
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      {{- toYaml .Values.serviceMonitors.backend.selector | nindent 6 }}
+  endpoints:
+  {{- range .Values.serviceMonitors.backend.endpoints }}
+  - port: {{ .port }}
+    path: {{ .path }}
+    interval: {{ .interval }}
+  {{- end }}
+{{- end }} 

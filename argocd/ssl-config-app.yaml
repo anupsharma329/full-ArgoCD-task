@@ -13,7 +13,7 @@ spec:
     path: ssl-config
     helm:
       values: |
-        domain: your-actual-domain.com  # Replace with your actual domain
+        domain: test-ssl.172.18.0.2.nip.io  # Test domain for Kind cluster
         email: your-email@example.com  # Replace with your email
         ssl:
           enabled: true

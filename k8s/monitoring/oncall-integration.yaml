@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oncall-config
+  namespace: monitoring
+data:
+  oncall-webhook: |
+    # PagerDuty Integration
+    pagerduty:
+      service_key: "YOUR_PAGERDUTY_SERVICE_KEY"
+      escalation_policy: "YOUR_ESCALATION_POLICY_ID"
+    
+    # OpsGenie Integration
+    opsgenie:
+      api_key: "YOUR_OPSGENIE_API_KEY"
+      team: "oncall-team"
+    
+    # Phone/SMS Integration
+    phone:
+      emergency_number: "+1-555-123-4567"
+      oncall_number: "+1-555-987-6543"
+  
+  escalation-policy: |
+    # Escalation Policy
+    level1:
+      duration: 5m
+      notify: ["slack", "email"]
+    
+    level2:
+      duration: 10m
+      notify: ["slack", "phone"]
+    
+    level3:
+      duration: 15m
+      notify: ["slack", "phone", "pagerduty"]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: oncall-rotation
+  namespace: monitoring
+spec:
+  schedule: "0 9 * * 1"  # Every Monday at 9 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: oncall-rotation
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Update on-call engineer
+              echo "Updating on-call rotation..."
+              
+              # Get current on-call engineer
+              CURRENT_ONCALL=$(kubectl get configmap -n monitoring oncall-config -o jsonpath='{.data.current-oncall}')
+              
+              # Update rotation (this would integrate with your HR system)
+              NEW_ONCALL="engineer-$(date +%U)"
+              
+              # Update Slack channel topic
+              curl -X POST -H 'Content-type: application/json' \
+                --data "{\"channel\":\"#oncall\",\"topic\":\"Current On-Call: $NEW_ONCALL\"}" \
+                $SLACK_WEBHOOK_URL
+              
+              echo "On-call rotation updated to: $NEW_ONCALL"
+          restartPolicy: OnFailure 

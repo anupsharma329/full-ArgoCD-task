@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/anupsharma329/full-ArgoCD-task.git
+    targetRevision: HEAD
+    path: monitoring-config
+    helm:
+      values: |
+        monitoring:
+          enabled: true
+          namespace: monitoring
+        serviceMonitors:
+          frontend:
+            enabled: true
+            selector:
+              app.kubernetes.io/name: frontend
+            endpoints:
+              - port: http
+                path: /metrics
+                interval: 30s
+          backend:
+            enabled: true
+            selector:
+              app.kubernetes.io/name: backend
+            endpoints:
+              - port: http
+                path: /metrics
+                interval: 30s
+        prometheusRules:
+          enabled: true
+          rules:
+            - name: app-alerts
+              groups:
+                - name: application
+                  rules:
+                    - alert: HighCPUUsage
+                      expr: container_cpu_usage_seconds_total > 0.8
+                      for: 5m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "High CPU usage detected"
+                        description: "Container {{ $labels.container }} has high CPU usage"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true 

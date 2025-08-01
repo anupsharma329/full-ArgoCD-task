@@ -1,0 +1,43 @@
+# Default values for monitoring-config
+# This is a YAML-formatted file.
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  namespace: monitoring
+
+# Service monitors configuration
+serviceMonitors:
+  frontend:
+    enabled: true
+    selector:
+      app.kubernetes.io/name: frontend
+    endpoints:
+      - port: http
+        path: /metrics
+        interval: 30s
+  backend:
+    enabled: true
+    selector:
+      app.kubernetes.io/name: backend
+    endpoints:
+      - port: http
+        path: /metrics
+        interval: 30s
+
+# Prometheus rules
+prometheusRules:
+  enabled: true
+  rules:
+    - name: app-alerts
+      groups:
+        - name: application
+          rules:
+            - alert: HighCPUUsage
+              expr: container_cpu_usage_seconds_total > 0.8
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "High CPU usage detected"
+                description: "Container {{ $labels.container }} has high CPU usage"

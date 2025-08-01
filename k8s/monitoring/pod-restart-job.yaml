@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restart-unhealthy-pods
+  namespace: production
+spec:
+  template:
+    spec:
+      serviceAccountName: pod-restart-sa
+      containers:
+      - name: kubectl
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # Get unhealthy pods
+          UNHEALTHY_PODS=$(kubectl get pods -n production --field-selector=status.phase!=Running -o jsonpath='{.items[*].metadata.name}')
+          
+          if [ ! -z "$UNHEALTHY_PODS" ]; then
+            echo "Found unhealthy pods: $UNHEALTHY_PODS"
+            
+            # Restart each unhealthy pod
+            for pod in $UNHEALTHY_PODS; do
+              echo "Restarting pod: $pod"
+              kubectl delete pod $pod -n production
+            done
+            
+            echo "Pod restart completed"
+          else
+            echo "No unhealthy pods found"
+          fi
+      restartPolicy: Never
+  backoffLimit: 3
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pod-restart-sa
+  namespace: production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-restart-role
+  namespace: production
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-restart-rolebinding
+  namespace: production
+subjects:
+- kind: ServiceAccount
+  name: pod-restart-sa
+  namespace: production
+roleRef:
+  kind: Role
+  name: pod-restart-role
+  apiGroup: rbac.authorization.k8s.io 
